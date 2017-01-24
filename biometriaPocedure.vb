@@ -359,25 +359,87 @@ If trigger = 2 Then	'Enviado para IHM
 		Elseif tagAccessLevel.Value = 3 Then 'Colaborador logou para mudar de nivel			
 
 			Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS"
-			tagUserRegUpdate.Value = 0
-			tagUserRegUpdate.Write()
+			tagUserRegUpdate.Value = 0			
 
 			Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
-			tagUserRegUpdate.Value = "NONE"
-			tagUserRegUpdate.Write()
+			tagUserSSBUpdate.Value = "NONE"			
 
 			Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
-			tagUserRegUpdate.Value = "NONE"
-			tagUserRegUpdate.Write()
+			tagUserLevelUpdate.Value = 0			
 
-			Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
-			tagUserRegUpdate.Value = "NONE"
-			tagUserRegUpdate.Write()
+			Set tagUserIdentifiedUpdate = "TAG PARA CRIAR DEPOIS"
+			tagUserIdentifiedUpdate.Value = 0			
 
 			Set rstTraining = conn.Execute( "SELECT * FROM TB_PESSOAS P ,TB_WORKPLACE_TR WTR WHERE WTR.ID_PESSOA = P.ID AND SSB = '" & userSSB & "' AND ID_WORKPLACE = '" & idWorkstation & "' ")
 			trainLevel = rstTraining.Fields("TRAIN_LEVEL").Value
 
-		End if
+			If ( userReg <> 0 and userSSB <> "") Then 'Se identificado salva as tags no PLC
+				tagUserRegUpdate.Value = userReg	
+				tagUserSSBUpdate.Value = userSSB	
+				tagUserLevelUpdate.Value = trainLevel
+				tagUserIdentifiedUpdate.Value = 1	
+				trigger = 5
+				tagTrigger.Value = 5
+				tagTrigger.Write()
+			Else 
+				trigger = -4
+				tagTrigger.Value = -4
+				tagTrigger.Write()		
+			End if 
+			
+			tagUserRegUpdate.Write()
+			tagUserSSBUpdate.Write()
+			tagUserLevelUpdate.Write()
+			tagUserIdentifiedUpdate.Write()
+
+			Set tagUserRegUpdate = Nothing
+			Set tagUserSSBUpdate = Nothing
+			Set tagUserLevelUpdate = Nothing
+
+		Elseif tagAccessLevel.Value = 4 Then 'Liderança Login
+
+			Set tagUserIdentifiedUpdate = "TAG PARA CRIAR DEPOIS"
+			tagUserIdentifiedUpdate.Read()			
+			
+			If (tagUserIdentifiedUpdate and adminLevel > 2) Then  'Operador logado, e promovedor tem nivel adequado
+
+				Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserRegUpdate.Read()
+				Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserSSBUpdate.Read()
+				Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserLevelUpdate.Read()		
+				Set tagUserNewLevelUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserLevelUpdate.Read()
+				
+				'Atualiza a Tabela Workstation_TR com os dados da nova DB
+				conn.Execute "UPDATE TB_WORKPLACE SET TRAIN_LEVEL = '" & tagUserNewLevelUpdate.Value & "' WHERE ID_PESSOA = ( SELECT ID FROM TB_PESSOAS WHERE SSB = '" & tagUserSSBUpdate.Value & "') AND ID_WORKPLACE = (SELECT ID FROM TB_WORKPLACE WHERE ID = '" & idWorkstation & "')"
+
+				'Cria evento de Promocao pela Liderança
+				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 38 & "," & popid.Value
+
+				'Registra Promocao -> Operador, Lider, Antigo, Novo
+				conn.Execute "EXEC [LTS].[dbo].PROMOTION '" & tagUserSSBUpdate.Value & "','" & userSSB & "'," & tagUserLevelUpdate.Value & "," & tagUserLevelUpdate.Value
+
+				trigger = 6
+				tagTrigger.Value = 6
+				tagTrigger.Write()
+
+				Set tagUserRegUpdate = Nothing
+				Set tagUserSSBUpdate = Nothing
+				Set tagUserLevelUpdate = Nothing	
+			
+			Else 'promovedor nao possui nivel para edicao
+				trigger = -5
+				tagTrigger.Value = -5
+				tagTrigger.Write()
+				'Insert Erro na tabela
+			End if
+
+
+			Set tagUserIdentifiedUpdate = Nothing
+
+		End if 'tagAcessLevel
 
 		conn.Execute("DELETE FROM tEnter WHERE L_TID=" & CStr(idTerminal))			
 				
