@@ -12,7 +12,6 @@
 '4 = Leitura Adm Ok
 '5 = Leitura Colaborador Ok
 '6 = Leitura Lider Ok
-
 'trigger errors : -1 = timeout, -2 = contagem invalida, -3 = identificado/nao treinado, -4 = nao identificado, -5 nivel abaixo Do requisitado
 
 Dim conn
@@ -121,7 +120,7 @@ timeCounter = timeCounterTag.Value
 	
 Set invalidCounterTag = HMIRuntime.Tags("DB_OPERADOR_POSTO[" & CStr(index) & "]_CMD_R_invalidCounter")	
 
-If trigger = 2 Then	'Enviado para IHM 
+If trigger = 2 or trigger = 7 Then	'Enviado para IHM 
 
 	Set rstEnter = conn.Execute("SELECT * FROM tEnter WHERE	L_TID=" & CStr(idTerminal) & "ORDER BY ID")
 	
@@ -226,7 +225,7 @@ If trigger = 2 Then	'Enviado para IHM
 						
 			trainLevel = rstTraining.Fields("TRAIN_LEVEL").Value 'Seta nivel de treinamento
 
-			If trainLevel = "" Or trainLevel = 0  Then 'Colaborador nao treinado / identificado /a matriz
+			If trainLevel = "" Or trainLevel = 0  Then 'Colaborador nao treinado / identificado na matriz
 				tagIdentified.Value = 0
 				tagIdentified.Write()
 				tagLogged.Value = 0 
@@ -235,21 +234,34 @@ If trigger = 2 Then	'Enviado para IHM
 				trigger = -3 
 				tagTrigger.Value = -3
 				tagTrigger.Write()
+
 				
 				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 36 & "," & popid.Value
 			
 
-			Elseif trainLevel = 1 Then  'Colaborador n�o possui n�vel suficiente para logar						
-			
-				tagIdentified.Value = 1
-				tagIdentified.Write()
-				tagLogged.Value = 0 
-				tagLogged.Write()
+			Elseif trainLevel = 1 and trigger = 2 Then  'Colaborador nao possui nivel suficiente para logar	
 
-				trigger = -4 
-				tagTrigger.Value = -4
-				tagTrigger.Write()
-				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 35 & "," & popid.Value
+				Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS" 
+				tagUserRegUpdate.Value = CInt(userReg)		
+				tagUserRegUpdate.Write()
+
+				Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserSSBUpdate.Value = userSSB	
+				tagUserSSBUpdate.Write()
+
+				Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserLevelUpdate.Value = 1
+				tagUserLevelUpdate.Write()
+
+				Set tagUserIdentifiedUpdate = "TAG PARA CRIAR DEPOIS"
+				tagUserIdentifiedUpdate.Value = 1
+				tagUserIdentifiedUpdate.Write()
+
+
+				trigger = 7
+				tagTrigger.Value = 7 'Operador logado com nivel baixo
+				tagTrigger.Write()			
+				
 			
 			Elseif trainLevel >= 2 Then 'Colaborador possui nivel para logar
 			
@@ -291,7 +303,21 @@ If trigger = 2 Then	'Enviado para IHM
 				
 				'UPDATE TABELA PESSOA NO POSTO
 				conn.Execute "EXEC UPT_PESSOA_POS " & userId  & "," & idWorkstation
-				
+			Elseif trigger = 7 Then 'Operador nivel 1 ja logado, aguardando padrinho
+
+				If adminLevel >= 3 Then 
+					'Pega operador da Nova db e coloca na posicao
+					'Registra na posicao do banco de dados
+					'Insere no evebti de  Login o SSB do Padrinho
+					trigger = 8
+					tagTrigger.Value = -8
+					tagTrigger.Write()	
+
+				Else
+					'Seta trigger para erro - Padrinho com nivel insuficiente 
+					'Registra evento
+				End if 
+
 			End If   	
 		
 		Elseif tagAccessLevel.Value = 2 Then 'Colaborador logado como ADM
