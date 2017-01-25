@@ -1,4 +1,4 @@
-# fp-wincc
+# Finger Print Scripts for Competence Matrix
 Scripts for use in WinCC to INSERT and RETRIEVE information of LTS/Competence Matrix database
 
 ####Biometria Procedure
