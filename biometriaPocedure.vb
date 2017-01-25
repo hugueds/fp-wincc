@@ -13,7 +13,7 @@
 '5 = Leitura Colaborador Ok
 '6 = Leitura Lider Ok
 
-'trigger errors : -1 = timeout, -2 = contagem invalida, -3 = identificado/nao treinado, -4 = n�o identificado, -5 nivel abaixo Do requisitado
+'trigger errors : -1 = timeout, -2 = contagem invalida, -3 = identificado/nao treinado, -4 = nao identificado, -5 nivel abaixo Do requisitado
 
 Dim conn
 Dim rstWorkplace, rstTerminal, rstEnter, rstTraining
@@ -27,6 +27,7 @@ Dim tEnterStatus, tEnterValid
 Dim userId, userReg, userSSB, idWorkstation, adminLevel, trainLevel
 Dim popid
 Dim securityCounter
+Dim tagUserRegUpdate, tagUserSSBUpdate, tagUserLevelUpdate, tagUserIdentifiedUpdate, tagUserNewLevelUpdate
 
 On Error Resume Next	
 
@@ -55,7 +56,6 @@ If station = "" Or  position = "" Then
 	TraceMsg "------ Function Biometria Terminal, station or position empty  " & vbLf	
 	Exit Function
 End If
-
 
 'Get the Database from the configuration
 Set sqlDbTag = HMIRuntime.Tags("SQL_DATABASE")
@@ -226,7 +226,7 @@ If trigger = 2 Then	'Enviado para IHM
 						
 			trainLevel = rstTraining.Fields("TRAIN_LEVEL").Value 'Seta nivel de treinamento
 
-			If trainLevel = "" Or trainLevel = 0  Then 'Colaborador n�o treinado / identificado /a matriz
+			If trainLevel = "" Or trainLevel = 0  Then 'Colaborador nao treinado / identificado /a matriz
 				tagIdentified.Value = 0
 				tagIdentified.Write()
 				tagLogged.Value = 0 
@@ -251,7 +251,7 @@ If trigger = 2 Then	'Enviado para IHM
 				tagTrigger.Write()
 				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 35 & "," & popid.Value
 			
-			Elseif trainLevel >= 2 Then 'Colaborador possui n�vel para logar
+			Elseif trainLevel >= 2 Then 'Colaborador possui nivel para logar
 			
 				'Set popid = HMIRuntime.Tags("POP_POSTO[" & index & "]") -- modificado 19-12-2016
 				'popid.Read()
@@ -358,7 +358,7 @@ If trigger = 2 Then	'Enviado para IHM
 		
 		Elseif tagAccessLevel.Value = 3 Then 'Colaborador logou para mudar de nivel			
 
-			Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS"
+			Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS" 
 			tagUserRegUpdate.Value = 0			
 
 			Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
@@ -398,18 +398,18 @@ If trigger = 2 Then	'Enviado para IHM
 
 		Elseif tagAccessLevel.Value = 4 Then 'Liderança Login
 
-			Set tagUserIdentifiedUpdate = "TAG PARA CRIAR DEPOIS"
+			Set tagUserIdentifiedUpdate = "TAG PARA CRIAR  NO WINCC"
 			tagUserIdentifiedUpdate.Read()			
 			
 			If (tagUserIdentifiedUpdate and adminLevel > 2) Then  'Operador logado, e promovedor tem nivel adequado
 
-				Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserRegUpdate = "TAG PARA CRIAR  NO WINCC"
 				tagUserRegUpdate.Read()
-				Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserSSBUpdate = "TAG PARA CRIAR  NO WINCC"
 				tagUserSSBUpdate.Read()
-				Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserLevelUpdate = "TAG PARA CRIAR  NO WINCC"
 				tagUserLevelUpdate.Read()		
-				Set tagUserNewLevelUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserNewLevelUpdate = "TAG PARA CRIAR  NO WINCC"
 				tagUserLevelUpdate.Read()
 				
 				'Atualiza a Tabela Workstation_TR com os dados da nova DB
