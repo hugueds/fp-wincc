@@ -24,4 +24,13 @@
     * 
 
 * Eventos
-    * 
+    * 31 Administrator Login
+    * 32 Administrator Logoff
+    * 33 Operator Login
+    * 34 Operator Logoff
+    * 35 Insuficient Level
+    * 36 Not Trained
+    * 37 Not Autorized
+    * 38 Promotion
+    * 39 Aux Login
+    * 40 Leader Login
