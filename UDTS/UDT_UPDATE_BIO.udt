@@ -1,0 +1,14 @@
+﻿TYPE "UDT_UPDATE_BIO"
+TITLE = UDT_UPDATE_BIO
+VERSION : 0.1
+//UDT criada para a criação de um array de DBs correspondente a cada posto de montagem. As DBs tem como finalidade armazenar o colaborador que esta em transição de um nível para outro ou aguardando autorização para trabalhar no posto
+   STRUCT
+      IDENTIFIED : Bool;   // Verifica se ha colaborador logado
+      LEVEL : Byte;   // Level atual do colaborador
+      NEW_LEVEL : Byte;   // Novo nivel do colaborador
+      REG : DWord;   // Registro
+      SSB : String[6];   // SSB
+   END_STRUCT;
+
+END_TYPE
+

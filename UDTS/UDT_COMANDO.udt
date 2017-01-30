@@ -1,0 +1,13 @@
+﻿TYPE "UDT_COMANDO"
+VERSION : 0.1
+   STRUCT
+      ID_WORKSTATION : Byte;
+      IDENTIFICADO : Bool;
+      HABILITADO : Bool;
+      NOME : String[6];
+      REGISTRO : Int;
+      NIVEL_ACESSO : Int;   // 0 Não habilitado | 1 Team Leader | 2 LTS
+   END_STRUCT;
+
+END_TYPE
+

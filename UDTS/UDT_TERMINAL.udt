@@ -1,0 +1,16 @@
+﻿TYPE "UDT_TERMINAL"
+VERSION : 0.1
+   STRUCT
+      Station : Byte;   // Numeração do posto onde o leitor se localiza
+      Position : Int;   // Posição na qual o operador selecionou
+      Trigger : Int;   // Comando que é enviado ao se solicitar login | Envia 1 para WinCC | 2 aguarda leitura | 3 Localizado | 10
+      UserId : Int;   // Registro do Colaborador
+      UserName : String[6];   // SSB do colaborador
+      AccessLevel : Int;   // 1 Para logar Operador | 2 Para administrador
+      IdWorkstation : Int;   // Numero do terminal
+      timeCounter : Int;   // Tempo para realizar a leitura do operador
+      invalidCounter : Int;   // Conta quantas vezes o operador  tentou se logar sem sucesso
+   END_STRUCT;
+
+END_TYPE
+

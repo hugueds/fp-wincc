@@ -1,4 +1,3 @@
-
 'Script para validacao de login de usuario no posto
 'Author : Hugo SSBHPE, Rafael SSBROX
 'Created: Nov/2015
@@ -44,9 +43,9 @@ If trigger = 3 Then
 	Exit Function
 End If
 
-If trigger <= 0 Or trigger > 10 Then
+If trigger <= 0 Or trigger > 11 Then
 	biometriaTerminal = 0
-	TraceMsg "------ Function Biometria Terminal, exiting...  trigger <= 0 || trigger >= 10 " & vbLf	
+	TraceMsg "------ Function Biometria Terminal, exiting...  trigger <= 0 || trigger >= 11 " & vbLf	
 	Exit Function
 End If
 
@@ -241,19 +240,19 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 
 			Elseif trainLevel = 1 and trigger = 2 Then  'Colaborador nao possui nivel suficiente para logar	
 
-				Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS" 
+				Set tagUserRegUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
 				tagUserRegUpdate.Value = CInt(userReg)		
 				tagUserRegUpdate.Write()
 
-				Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserSSBUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
 				tagUserSSBUpdate.Value = userSSB	
 				tagUserSSBUpdate.Write()
 
-				Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserLevelUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
 				tagUserLevelUpdate.Value = 1
 				tagUserLevelUpdate.Write()
 
-				Set tagUserIdentifiedUpdate = "TAG PARA CRIAR DEPOIS"
+				Set tagUserIdentifiedUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
 				tagUserIdentifiedUpdate.Value = 1
 				tagUserIdentifiedUpdate.Write()
 
@@ -307,8 +306,9 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 
 				If adminLevel >= 3 Then 
 					'Pega operador da Nova db e coloca na posicao
-					'Registra na posicao do banco de dados
-					'Insere no evebti de  Login o SSB do Padrinho
+					'Registra operador no posto/posicao na tabela pessoa posto
+					'Insere no evento de  Login o SSB do Padrinho
+					conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 34 & "," & popid.Value
 					trigger = 8
 					tagTrigger.Value = -8
 					tagTrigger.Write()	
@@ -384,32 +384,36 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 		
 		Elseif tagAccessLevel.Value = 3 Then 'Colaborador logou para mudar de nivel			
 
-			Set tagUserRegUpdate = "TAG PARA CRIAR DEPOIS" 
+			Set tagUserRegUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_REG")
 			tagUserRegUpdate.Value = 0			
 
-			Set tagUserSSBUpdate = "TAG PARA CRIAR DEPOIS"
-			tagUserSSBUpdate.Value = "NONE"			
+			Set tagUserSSBUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & CStr(index) & "]_SSB")
+			TraceMsg tagUserSSBUpdate.Value
+			tagUserSSBUpdate.Value = "NONE"
+			
 
-			Set tagUserLevelUpdate = "TAG PARA CRIAR DEPOIS"
+			Set tagUserLevelUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_LEVEL")
 			tagUserLevelUpdate.Value = 0			
 
-			Set tagUserIdentifiedUpdate = "TAG PARA CRIAR DEPOIS"
+			Set tagUserIdentifiedUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_IDENTIFIED")
 			tagUserIdentifiedUpdate.Value = 0			
 
 			Set rstTraining = conn.Execute( "SELECT * FROM TB_PESSOAS P ,TB_WORKPLACE_TR WTR WHERE WTR.ID_PESSOA = P.ID AND SSB = '" & userSSB & "' AND ID_WORKPLACE = '" & idWorkstation & "' ")
 			trainLevel = rstTraining.Fields("TRAIN_LEVEL").Value
+			
 
-			If ( userReg <> 0 and userSSB <> "") Then 'Se identificado salva as tags no PLC
-				tagUserRegUpdate.Value = userReg	
+			If ( userReg <> 0 And userSSB <> "" And trainLevel) Then 'Se identificado salva as tags no PLC
+				TraceMsg userSSB & " " & CStr(userReg) & " " & trainLevel & " " & index
+				tagUserRegUpdate.Value = CInt(userReg)
 				tagUserSSBUpdate.Value = userSSB	
-				tagUserLevelUpdate.Value = trainLevel
+				tagUserLevelUpdate.Value = CInt(trainLevel)
 				tagUserIdentifiedUpdate.Value = 1	
 				trigger = 5
 				tagTrigger.Value = 5
-				tagTrigger.Write()
+				tagTrigger.Write()		
 			Else 
-				trigger = -4
-				tagTrigger.Value = -4
+				trigger = -3
+				tagTrigger.Value = -3
 				tagTrigger.Write()		
 			End if 
 			
@@ -422,38 +426,40 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 			Set tagUserSSBUpdate = Nothing
 			Set tagUserLevelUpdate = Nothing
 
-		Elseif tagAccessLevel.Value = 4 Then 'Liderança Login
+		Elseif tagAccessLevel.Value = 4 Then 'Liderança Login para promover operador
 
-			Set tagUserIdentifiedUpdate = "TAG PARA CRIAR  NO WINCC"
+			Set tagUserIdentifiedUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index &"]_IDENTIFIED")
 			tagUserIdentifiedUpdate.Read()			
 			
-			If (tagUserIdentifiedUpdate and adminLevel > 2) Then  'Operador logado, e promovedor tem nivel adequado
+			If (tagUserIdentifiedUpdate.Value = 1 And adminLevel > 2) Then  'Operador logado, e promovedor tem nivel adequado
 
-				Set tagUserRegUpdate = "TAG PARA CRIAR  NO WINCC"
+				Set tagUserRegUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index &"]_REG")
 				tagUserRegUpdate.Read()
-				Set tagUserSSBUpdate = "TAG PARA CRIAR  NO WINCC"
+				Set tagUserSSBUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index &"]_SSB")
 				tagUserSSBUpdate.Read()
-				Set tagUserLevelUpdate = "TAG PARA CRIAR  NO WINCC"
+				Set tagUserLevelUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index &"]_LEVEL")
 				tagUserLevelUpdate.Read()		
-				Set tagUserNewLevelUpdate = "TAG PARA CRIAR  NO WINCC"
-				tagUserLevelUpdate.Read()
-				
+				Set tagUserNewLevelUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index &"]_NEW_LEVEL")
+				tagUserNewLevelUpdate.Read()
+					
 				'Atualiza a Tabela Workstation_TR com os dados da nova DB
-				conn.Execute "UPDATE TB_WORKPLACE SET TRAIN_LEVEL = '" & tagUserNewLevelUpdate.Value & "' WHERE ID_PESSOA = ( SELECT ID FROM TB_PESSOAS WHERE SSB = '" & tagUserSSBUpdate.Value & "') AND ID_WORKPLACE = (SELECT ID FROM TB_WORKPLACE WHERE ID = '" & idWorkstation & "')"
+				conn.Execute "UPDATE TB_WORKPLACE_TR SET TRAIN_LEVEL = " & CInt(tagUserNewLevelUpdate.Value) & " WHERE ID_PESSOA = ( SELECT ID FROM TB_PESSOAS WHERE SSB = '" & tagUserSSBUpdate.Value & "') AND ID_WORKPLACE = (SELECT ID FROM TB_WORKPLACE WHERE ID = '" & idWorkstation & "')"
 
 				'Cria evento de Promocao pela Liderança
-				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 38 & "," & popid.Value
+				conn.Execute "EXEC [LTS].[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 38 & "," & popid.Value
 
 				'Registra Promocao -> Operador, Lider, Antigo, Novo
-				conn.Execute "EXEC [LTS].[dbo].PROMOTION '" & tagUserSSBUpdate.Value & "','" & userSSB & "'," & tagUserLevelUpdate.Value & "," & tagUserLevelUpdate.Value
+				conn.Execute "EXEC [LTS].[dbo].PROMOTION '" & tagUserSSBUpdate.Value & "','" & userSSB & "'," & tagUserLevelUpdate.Value & "," & tagUserNewLevelUpdate.Value
 
 				trigger = 6
 				tagTrigger.Value = 6
 				tagTrigger.Write()
+				tagUserLevelUpdate.Value = tagUserNewLevelUpdate.Value
+				tagUserLevelUpdate.Write()
 
 				Set tagUserRegUpdate = Nothing
 				Set tagUserSSBUpdate = Nothing
-				Set tagUserLevelUpdate = Nothing	
+				Set tagUserLevelUpdate = Nothing					
 			
 			Else 'promovedor nao possui nivel para edicao
 				trigger = -5
@@ -461,7 +467,6 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 				tagTrigger.Write()
 				'Insert Erro na tabela
 			End if
-
 
 			Set tagUserIdentifiedUpdate = Nothing
 
@@ -580,6 +585,26 @@ If trigger = 10 Then
 	
 	'REMOVE OPERADOR DO POSTO
 	conn.Execute "DELETE FROM TB_PESSOA_POSTO WHERE ID_WORKPLACE = " & idWorkstation
+	
+	trigger = 0
+	tagTrigger.Value = 0 ' Waiting 	
+	tagTrigger.Write()	
+	
+	Set popid = Nothing
+	Set tagUserSSB = Nothing
+	Set tagTrainingLevel = Nothing
+	Set tagUserReg = Nothing
+	Set tagLogged = Nothing
+	Set tagIdentified = Nothing
+
+End If 'Trigger 10
+
+If trigger = 11 Then 
+
+	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_REG") = 0
+	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_SSB") = "NONE"
+	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_LEVEL") = 0
+	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_IDENTIFIED") = 0
 	
 	trigger = 0
 	tagTrigger.Value = 0 ' Waiting 	

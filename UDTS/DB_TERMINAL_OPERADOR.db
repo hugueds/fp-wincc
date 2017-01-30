@@ -1,0 +1,12 @@
+﻿DATA_BLOCK "DB_TERMINAL_OPERADOR"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.1
+   STRUCT 
+      POSTO : Array[1..32] of "UDT_OPERADOR";
+   END_STRUCT;
+
+
+BEGIN
+
+END_DATA_BLOCK
+

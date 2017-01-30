@@ -34,3 +34,10 @@
     * 38 Promotion
     * 39 Aux Login
     * 40 Leader Login
+
+* Numero das DBs
+        * DB Update Bio - 205
+        * DB Operator - 175
+        * DB Terminal - 128
+        * DB Terminal Comando - 119
+        * DB Comp Matriz - 185

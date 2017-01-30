@@ -1,0 +1,13 @@
+﻿DATA_BLOCK "DB_TERMINAL"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.1
+NON_RETAIN
+   STRUCT 
+      POSTO : Array[1..32] of "UDT_TERMINAL";
+   END_STRUCT;
+
+
+BEGIN
+
+END_DATA_BLOCK
+

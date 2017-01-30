@@ -1,0 +1,14 @@
+﻿TYPE "UDT_OPERADOR"
+VERSION : 0.1
+   STRUCT
+      POSICAO : Array[1..5] of Struct
+         ID_WORKSTATION : Byte;   // Posto de montage Ex. 115
+         IDENTIFICADO : Bool;   // Se o operador foi encontrado no DB de cadastro
+         HABILITADO : Bool;   // Se o operador possui os treinamentos necessários para trabalhar
+         SSB : String[6];   // SSB do operador
+         REGISTRO : Int;   // Registro do operador
+      END_STRUCT;
+   END_STRUCT;
+
+END_TYPE
+

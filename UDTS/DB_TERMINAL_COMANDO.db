@@ -1,0 +1,13 @@
+﻿DATA_BLOCK "DB_TERMINAL_COMANDO"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+NON_RETAIN
+   VAR 
+      TERM : Array[1..32] of "UDT_COMANDO";
+   END_VAR
+
+
+BEGIN
+
+END_DATA_BLOCK
+
