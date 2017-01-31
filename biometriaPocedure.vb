@@ -240,27 +240,28 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 
 			Elseif trainLevel = 1 and trigger = 2 Then  'Colaborador nao possui nivel suficiente para logar	
 
-				Set tagUserRegUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
+				Set tagUserRegUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_REG")
 				tagUserRegUpdate.Value = CInt(userReg)		
 				tagUserRegUpdate.Write()
 
-				Set tagUserSSBUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
+				Set tagUserSSBUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_SSB")
 				tagUserSSBUpdate.Value = userSSB	
 				tagUserSSBUpdate.Write()
 
-				Set tagUserLevelUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
+				Set tagUserLevelUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_LEVEL")
 				tagUserLevelUpdate.Value = 1
 				tagUserLevelUpdate.Write()
 
-				Set tagUserIdentifiedUpdate = HMIRuntime.Tags("Tag PARA CRIAR DEPOIS")
+				Set tagUserIdentifiedUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_IDENTIFIED")
 				tagUserIdentifiedUpdate.Value = 1
 				tagUserIdentifiedUpdate.Write()
 
 
 				trigger = 7
 				tagTrigger.Value = 7 'Operador logado com nivel baixo
-				tagTrigger.Write()			
-				
+				tagTrigger.Write()	
+
+				biometriaTerminal = 0		
 			
 			Elseif trainLevel >= 2 Then 'Colaborador possui nivel para logar
 			
@@ -298,10 +299,10 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 									
 				'CRIAR INSERT NA TABELA EVENTOS (SUCESSO)
 				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 33 & "," & popid.Value
-				
-				
+
 				'UPDATE TABELA PESSOA NO POSTO
 				conn.Execute "EXEC UPT_PESSOA_POS " & userId  & "," & idWorkstation
+
 			Elseif trigger = 7 Then 'Operador nivel 1 ja logado, aguardando padrinho
 
 				If adminLevel >= 3 Then 
@@ -310,7 +311,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 					'Insere no evento de  Login o SSB do Padrinho
 					conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 34 & "," & popid.Value
 					trigger = 8
-					tagTrigger.Value = -8
+					tagTrigger.Value = 8
 					tagTrigger.Write()	
 
 				Else
@@ -549,7 +550,7 @@ If trigger = 1 Then
 
 End If	'Trigger  1
 
-If trigger = 10 Then 
+If trigger = 10 Then 'deslogando da posicao 
 
 	Set popid = HMIRuntime.Tags("POP_POSTO[" & index & "]")
 	popid.Read()
@@ -599,7 +600,7 @@ If trigger = 10 Then
 
 End If 'Trigger 10
 
-If trigger = 11 Then 
+If trigger = 11 Then 'Deslogando da tela de promocao
 
 	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_REG") = 0
 	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_SSB") = "NONE"
@@ -610,7 +611,7 @@ If trigger = 11 Then
 	tagTrigger.Value = 0 ' Waiting 	
 	tagTrigger.Write()	
 
-End If 'Trigger 10
+End If 'Trigger 11
 
 
 'Close the recordset
