@@ -45,7 +45,7 @@ End If
 
 If trigger <= 0 Or trigger > 11 Then
 	biometriaTerminal = 0
-	TraceMsg "------ Function Biometria Terminal, exiting...  trigger <= 0 || trigger >= 11 " & vbLf	
+	TraceMsg "------ Function Biometria Terminal, exiting...  trigger <= 0 || trigger > 11 " & vbLf	
 	Exit Function
 End If
 
@@ -139,7 +139,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 		Set rstEnter = Nothing
 		biometriaTerminal = -1 ' Not Ok	
 		Exit Function
-	End If				
+	End If	'Error			
 
 	tEnterValid = 0
 	invalidCounter = 0
@@ -182,7 +182,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 		Set popid = HMIRuntime.Tags("POP_POSTO[" & index & "]")
 		popid.Read()
 
-		If  tagAccessLevel.Value = 1 Then	 'Caso o operador esteja na linha de montagem
+		If     tagAccessLevel.Value = 1 Then	 'Caso o operador esteja na linha de montagem
 							
 			tagIdentified.Value = 0
 			tagIdentified.Write()
@@ -224,7 +224,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 						
 			trainLevel = rstTraining.Fields("TRAIN_LEVEL").Value 'Seta nivel de treinamento
 
-			If trainLevel = "" Or trainLevel = 0  Then 'Colaborador nao treinado / identificado na matriz
+			If trainLevel = "" And trigger = 2  Then 'Colaborador nao treinado / identificado na matriz
 				tagIdentified.Value = 0
 				tagIdentified.Write()
 				tagLogged.Value = 0 
@@ -238,32 +238,32 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 36 & "," & popid.Value
 			
 
-			Elseif trainLevel = 1 and trigger = 2 Then  'Colaborador nao possui nivel suficiente para logar	
+			Elseif trainLevel = 1 And trigger = 2 Then  'Colaborador nao possui nivel suficiente para logar, mas aguardara padrinho
 
 				Set tagUserRegUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_REG")
 				tagUserRegUpdate.Value = CInt(userReg)		
 				tagUserRegUpdate.Write()
 
-				Set tagUserSSBUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_SSB")
+				Set tagUserSSBUpdate = HMIRuntime.Tags("UPT_BIO_POSTO["& index & "]_SSB")
 				tagUserSSBUpdate.Value = userSSB	
 				tagUserSSBUpdate.Write()
 
-				Set tagUserLevelUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_LEVEL")
+				Set tagUserLevelUpdate = HMIRuntime.Tags("UPT_BIO_POSTO["& index & "]_LEVEL")
 				tagUserLevelUpdate.Value = 1
 				tagUserLevelUpdate.Write()
 
-				Set tagUserIdentifiedUpdate = HMIRuntime.Tags("UPT_BIO_POSTO[" & index & "]_IDENTIFIED")
+				Set tagUserIdentifiedUpdate = HMIRuntime.Tags("UPT_BIO_POSTO["& index & "]_IDENTIFIED")
 				tagUserIdentifiedUpdate.Value = 1
 				tagUserIdentifiedUpdate.Write()
 
 
 				trigger = 7
 				tagTrigger.Value = 7 'Operador logado com nivel baixo
-				tagTrigger.Write()	
-
-				biometriaTerminal = 0		
+				tagTrigger.Write()			
+				biometriaTerminal = 0
+				
 			
-			Elseif trainLevel >= 2 Then 'Colaborador possui nivel para logar
+			Elseif trainLevel >= 2 And trigger = 2 Then 'Colaborador possui nivel para logar
 			
 				'Set popid = HMIRuntime.Tags("POP_POSTO[" & index & "]") -- modificado 19-12-2016
 				'popid.Read()
@@ -299,24 +299,48 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 									
 				'CRIAR INSERT NA TABELA EVENTOS (SUCESSO)
 				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 33 & "," & popid.Value
-
+				
 				'UPDATE TABELA PESSOA NO POSTO
 				conn.Execute "EXEC UPT_PESSOA_POS " & userId  & "," & idWorkstation
-
+				
 			Elseif trigger = 7 Then 'Operador nivel 1 ja logado, aguardando padrinho
 
 				If adminLevel >= 3 Then 
+					
+					'Registra Padrinho
+					conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 40 & "," & popid.Value
+										
+					'Identifica pessoa no posto
+					tagIdentified.Value = 1
+					tagIdentified.Write()
+					tagLogged.Value = 1 
+					tagLogged.Write()	
+									
 					'Pega operador da Nova db e coloca na posicao
+					HMIRuntime.SmartTags("DB_OPERADOR_POSTO[" & index & "]_POSICAO[" & position & "]_REGISTRO") = HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index & "]_REG")
+					HMIRuntime.SmartTags("DB_OPERADOR_POSTO[" & index & "]_POSICAO[" & position & "]_SSB") = HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index & "]_SSB")
+					HMIRuntime.SmartTags("DB_OPERADOR_POSTO[" & index & "]_POSICAO[" & position & "]_TRAINING_LEVEL") = 1
+					
 					'Registra operador no posto/posicao na tabela pessoa posto
 					'Insere no evento de  Login o SSB do Padrinho
-					conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 34 & "," & popid.Value
+					userId = HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index & "]_REG")
+					
+					conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 39 & "," & popid.Value
+					
+					conn.Execute "EXEC UPT_PESSOA_POS " & userId  & "," & idWorkstation
+					
 					trigger = 8
 					tagTrigger.Value = 8
 					tagTrigger.Write()	
+					biometriaTerminal = 0
 
 				Else
 					'Seta trigger para erro - Padrinho com nivel insuficiente 
 					'Registra evento
+					trigger = -4
+					tagTrigger.Value = -4
+					tagTrigger.Write()	
+					biometriaTerminal = 0
 				End if 
 
 			End If   	
@@ -504,7 +528,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 			'Insert na tabela eventos
 		End If
 	
-	End If			
+	End If 'Validacao			
 	
 	rstEnter.Close
 	Set rstEnter = Nothing		
@@ -550,7 +574,7 @@ If trigger = 1 Then
 
 End If	'Trigger  1
 
-If trigger = 10 Then 'deslogando da posicao 
+If trigger = 10 Then 
 
 	Set popid = HMIRuntime.Tags("POP_POSTO[" & index & "]")
 	popid.Read()
@@ -600,7 +624,7 @@ If trigger = 10 Then 'deslogando da posicao
 
 End If 'Trigger 10
 
-If trigger = 11 Then 'Deslogando da tela de promocao
+If trigger = 11 Then 
 
 	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_REG") = 0
 	HMIRuntime.SmartTags("UPT_BIO_POSTO[" & index &"]_SSB") = "NONE"
