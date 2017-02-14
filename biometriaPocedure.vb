@@ -1,3 +1,5 @@
+Function biometriaTerminal(station, position, trigger, index)
+
 'Script para validacao de login de usuario no posto
 'Author : Hugo SSBHPE, Rafael SSBROX
 'Created: Nov/2015
@@ -29,9 +31,6 @@ Dim tagUserRegUpdate, tagUserSSBUpdate, tagUserLevelUpdate, tagUserIdentifiedUpd
 
 On Error Resume Next	
 
-'TraceMsg "------ Function Biometria Terminal, Station: " & CStr(station) & ", Position: " & CStr(workplace) & vbLf	
-
-'Get the trigger value
 If station > 0 Then 
 	Set tagTrigger = HMIRuntime.Tags("DB_OPERADOR_POSTO[" & CStr(index) & "]_CMD_WR_Trigger")
 	tagTrigger.Read()
@@ -54,6 +53,7 @@ If station = "" Or  position = "" Then
 	TraceMsg "------ Function Biometria Terminal, station or position empty  " & vbLf	
 	Exit Function
 End If
+
 
 'Get the Database from the configuration
 Set sqlDbTag = HMIRuntime.Tags("SQL_DATABASE")
@@ -139,7 +139,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 		Set rstEnter = Nothing
 		biometriaTerminal = -1 ' Not Ok	
 		Exit Function
-	End If	'Error			
+	End If				
 
 	tEnterValid = 0
 	invalidCounter = 0
@@ -182,7 +182,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 		Set popid = HMIRuntime.Tags("POP_POSTO[" & index & "]")
 		popid.Read()
 
-		If     tagAccessLevel.Value = 1 Then	 'Caso o operador esteja na linha de montagem
+		If  tagAccessLevel.Value = 1 Then	 'Caso o operador esteja na linha de montagem
 							
 			tagIdentified.Value = 0
 			tagIdentified.Write()
@@ -233,7 +233,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 				trigger = -3 
 				tagTrigger.Value = -3
 				tagTrigger.Write()
-
+				biometriaTerminal = 0
 				
 				conn.Execute "EXEC LTS.[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 36 & "," & popid.Value
 			
@@ -427,11 +427,10 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 			trainLevel = rstTraining.Fields("TRAIN_LEVEL").Value
 			
 
-			If ( userReg <> 0 And userSSB <> "" And trainLevel) Then 'Se identificado salva as tags no PLC
-				TraceMsg userSSB & " " & CStr(userReg) & " " & trainLevel & " " & index
-				tagUserRegUpdate.Value = CInt(userReg)
+			If ( userReg <> 0 And userSSB <> "" And trainLevel > 0) Then 'Se identificado salva as tags no PLC
+				tagUserRegUpdate.Value = userReg
 				tagUserSSBUpdate.Value = userSSB	
-				tagUserLevelUpdate.Value = CInt(trainLevel)
+				tagUserLevelUpdate.Value = trainLevel
 				tagUserIdentifiedUpdate.Value = 1	
 				trigger = 5
 				tagTrigger.Value = 5
@@ -468,7 +467,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 				tagUserNewLevelUpdate.Read()
 					
 				'Atualiza a Tabela Workstation_TR com os dados da nova DB
-				conn.Execute "UPDATE TB_WORKPLACE_TR SET TRAIN_LEVEL = " & CInt(tagUserNewLevelUpdate.Value) & " WHERE ID_PESSOA = ( SELECT ID FROM TB_PESSOAS WHERE SSB = '" & tagUserSSBUpdate.Value & "') AND ID_WORKPLACE = (SELECT ID FROM TB_WORKPLACE WHERE ID = '" & idWorkstation & "')"
+				conn.Execute "UPDATE TB_WORKPLACE_TR SET TRAIN_LEVEL = " & tagUserNewLevelUpdate.Value & " WHERE ID_PESSOA = ( SELECT ID FROM TB_PESSOAS WHERE SSB = '" & tagUserSSBUpdate.Value & "') AND ID_WORKPLACE = (SELECT ID FROM TB_WORKPLACE WHERE ID = '" & idWorkstation & "')"
 
 				'Cria evento de Promocao pela Liderança
 				conn.Execute "EXEC [LTS].[dbo].INS_MATRIZ_EVENT " & idWorkstation & "," & userId & "," & 38 & "," & popid.Value
@@ -528,7 +527,7 @@ If trigger = 2 or trigger = 7 Then	'Enviado para IHM
 			'Insert na tabela eventos
 		End If
 	
-	End If 'Validacao			
+	End If			
 	
 	rstEnter.Close
 	Set rstEnter = Nothing		
@@ -650,3 +649,6 @@ Set rstWorkplace = Nothing
 Set conn = Nothing
 Set tagTrigger = Nothing	
 Set popid = Nothing
+
+
+End Function
